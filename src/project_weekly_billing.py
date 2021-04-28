@@ -2,6 +2,7 @@
 # having two different classes Project and Employee
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class Project:
@@ -39,6 +40,7 @@ class Project:
             billing_amount_in_usd : int
             total_hours_spent : int
         """
+        self.project_name = project_name
         self.employees = list(
             pd.unique(data.loc[data["Project Name"] == project_name, "User"])
         )
@@ -46,7 +48,9 @@ class Project:
             pd.unique(data.loc[data["Project Name"] == project_name, "Tag"])
         )
 
-        data["Hours(For Calculation)"] = data["Hours(For Calculation)"].astype(float)
+        data["Hours(For Calculation)"] = data[
+            "Hours(For Calculation)"
+            ].astype(float)
 
         self.billing_amount_in_inr = data.loc[
             data["Project Name"] == project_name, "billing_amount_inr"
@@ -69,13 +73,14 @@ class Project:
 
         self.table = data.loc[
             data["Project Name"] == project_name,
-            ("Tag", "User", "Hours(For Calculation)"),
+            ("Tag", "User", "Hours(For Calculation)", "billing_amount_inr"),
         ]
 
     def calculate_activity_summary(self):
         """returns activity summary of employees against working hours"""
         return self.table.pivot_table(
-            index="Tag", columns="User", values="Hours(For Calculation)", aggfunc="sum"
+            index="Tag", columns="User",
+            values="Hours(For Calculation)", aggfunc="sum"
         )
 
     def calculate_employee_summary(self):
@@ -83,8 +88,14 @@ class Project:
         return self.table.groupby("User")["Hours(For Calculation)"].sum()
 
     def display_bar_chart(self):
-        """returns bar plot of employees against working hours"""
-        return self.table.plot.bar(x="User", y="Hours(For Calculation)", rot=0)
+        """returns bar plot of employees against billing amount"""
+        self.bar = self.table.groupby("User")["billing_amount_inr"].sum()
+        self.bar.plot.bar(
+            x="User", y="billing_amount_inr", rot=0,
+            title="employees vs billing amount"
+        )
+        plt.show()
+        return 1
 
 
 class Employee:
@@ -122,11 +133,16 @@ class Employee:
             billing_amount_in_usd : int
             total_hours_spent : int
         """
+        self.employee_name = employee_name
         self.projects = list(
             pd.unique(data.loc[data["User"] == employee_name, "Project Name"])
         )
-        self.tags = list(pd.unique(data.loc[data["User"] == employee_name, "Tag"]))
-        data["Hours(For Calculation)"] = data["Hours(For Calculation)"].astype(float)
+        self.tags = list(
+            pd.unique(data.loc[data["User"] == employee_name, "Tag"])
+            )
+        data["Hours(For Calculation)"] = data[
+            "Hours(For Calculation)"
+            ].astype(float)
 
         self.total_billing_amount = data.loc[
             data["User"] == employee_name, "billing_amount_inr"
@@ -147,25 +163,37 @@ class Employee:
             self.total_hours_spent,
         )
         self.table = data.loc[
-            data["User"] == employee_name, ("Tag", "User", "Hours(For Calculation)")
+            data["User"] == employee_name,
+            ("Tag", "Project Name", "Hours(For Calculation)",
+                "billing_amount_inr"),
         ]
 
     def calculate_activity_summary(self):
         """returns dictionary key : Tag, values : Hours(For calculation)"""
         return pd.Series(
-            self.table["Hours(For Calculation)"].values, index=self.table.Tag
+            self.table.groupby("Tag")["Hours(For Calculation)"].sum()
         ).to_dict()
 
     def calculate_project_summary(self):
         """returns dictionary key : Project Name,
         values : Hours(For calculation)"""
         return pd.Series(
-            self.table["Hours(For Calculation)"].values, index=self.table["User"]
+            self.table.groupby("Project Name")["Hours(For Calculation)"].sum()
         ).to_dict()
 
     def display_bar_chart(self):
-        """returns bar plot of Project Name against working hours"""
-        return self.table.plot.bar(x="User", y="Hours(For Calculation)", rot=0)
+        """returns bar plot of Project Name against billing amount"""
+        self.bar = self.table.groupby("Project Name")[
+            "billing_amount_inr"
+            ].sum()
+        self.bar.plot.bar(
+            x="Project Name",
+            y="billing_amount_inr",
+            rot=0,
+            title="Project Name vs billing amount",
+        )
+        plt.show()
+        return 1
 
 
 if __name__ == "__main__":
@@ -184,3 +212,12 @@ if __name__ == "__main__":
     employee_instance = []
     for employee_name in employees_list:
         employee_instance.append(Employee(employee_name, data))
+
+    project_instance[0].calculate_activity_summary()
+    project_instance[0].calculate_employee_summary()
+    project_instance[0].display_bar_chart()
+
+    employee_instance[0].calculate_project_summary()
+    employee_instance[0].calculate_activity_summary()
+    employee_instance[0].display_bar_chart()
+    print(employee_instance[0].employee_name)
